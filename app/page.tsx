@@ -27,6 +27,19 @@ import {
 
 type DialogMode = 'save' | 'rename' | 'delete' | null;
 
+const BUNDLED_MAIN_LAYOUT_ID = 'bundled-main';
+const BUNDLED_MAIN_LAYOUT_DATE = '2026-08-27T00:00:00.000Z';
+
+function createBundledMainProfile(): LayoutProfile {
+  return {
+    id: BUNDLED_MAIN_LAYOUT_ID,
+    name: 'MAIN',
+    snapshot: cloneLayoutSnapshot(),
+    createdAt: BUNDLED_MAIN_LAYOUT_DATE,
+    updatedAt: BUNDLED_MAIN_LAYOUT_DATE,
+  };
+}
+
 function createProfile(name: string, snapshot: BulletinLayoutSnapshot): LayoutProfile {
   const now = new Date().toISOString();
   return { id: `layout-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name, snapshot: cloneLayoutSnapshot(snapshot), createdAt: now, updatedAt: now };
@@ -144,9 +157,16 @@ export default function Home() {
       // A schema mismatch in an earlier build could normalize the IndexedDB
       // record to an empty library. Prefer the richest valid recovery source
       // instead of allowing that empty record to erase older saved layouts.
-      const library = candidates.reduce((best, candidate) => (
+      const recoveredLibrary = candidates.reduce((best, candidate) => (
         candidate.profiles.length > best.profiles.length ? candidate : best
       ), indexedDbLibrary ?? { version: 4, activeProfileId: DEFAULT_LAYOUT_ID, profiles: [] });
+      const hasMainLayout = recoveredLibrary.profiles.some((profile) => profile.name.toLowerCase() === 'main');
+      const bundledMain = createBundledMainProfile();
+      const library = hasMainLayout ? recoveredLibrary : {
+        ...recoveredLibrary,
+        activeProfileId: recoveredLibrary.profiles.length === 0 ? bundledMain.id : recoveredLibrary.activeProfileId,
+        profiles: [bundledMain, ...recoveredLibrary.profiles],
+      };
       await saveStoredLayoutLibrary(library).catch(() => setPersistenceError('Browser storage is unavailable. Saved images may not survive a refresh.'));
       if (cancelled) return;
       const active = library.profiles.find((profile) => profile.id === library.activeProfileId);
@@ -288,6 +308,26 @@ export default function Home() {
     void persistLibrary(next, profile.id);
   };
 
+  const exportActiveLayout = () => {
+    const active = profilesRef.current.find((profile) => profile.id === activeLayoutIdRef.current);
+    if (!active) return;
+    const library = {
+      version: 4 as const,
+      activeProfileId: active.id,
+      profiles: [{ ...active, snapshot: cloneLayoutSnapshot(layoutRef.current) }],
+    };
+    const blob = new Blob([JSON.stringify(library, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `${active.name.replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '') || 'layout'}.fx-layout.json`;
+    link.href = url;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const deleteLayout = () => {
     const currentActiveId = activeLayoutIdRef.current;
     if (currentActiveId === DEFAULT_LAYOUT_ID) return;
@@ -342,6 +382,7 @@ export default function Home() {
         onSaveChanges={saveChanges}
         onRename={openRenameDialog}
         onDuplicate={duplicateLayout}
+        onExportLayout={exportActiveLayout}
         onDelete={() => setDialogMode('delete')}
         onUndo={undo}
         onResetLayout={resetLayout}

@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Copy, FileDown, FileImage, Grip, LoaderCircle, Pencil, Printer, RotateCcw, Save, Trash2, Undo2 } from 'lucide-react';
+import { Check, Copy, Download, FileDown, FileImage, Grip, LoaderCircle, Pencil, Printer, RotateCcw, Save, Trash2, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 import { formatLongDate } from '../lib/formatters';
 import type { BulletinData } from '../types/bulletin';
@@ -26,6 +26,7 @@ interface ExportToolbarProps {
   onSaveChanges: () => void;
   onRename: () => void;
   onDuplicate: () => void;
+  onExportLayout: () => void;
   onDelete: () => void;
   onUndo: () => void;
   onResetLayout: () => void;
@@ -63,7 +64,7 @@ async function waitForStableBulletin(bulletin: HTMLElement) {
   }
 }
 
-export function ExportToolbar({ data, isEditing, layouts, activeLayoutId, canUndo, selectedTargetLabel, selectedTargetCount, selectedStyle, onSelectLayout, onUploadNew, onStartEditing, onSaveAs, onSaveChanges, onRename, onDuplicate, onDelete, onUndo, onResetLayout, onDoneEditing, onBeginTypographyChange, onTypographyChange }: ExportToolbarProps) {
+export function ExportToolbar({ data, isEditing, layouts, activeLayoutId, canUndo, selectedTargetLabel, selectedTargetCount, selectedStyle, onSelectLayout, onUploadNew, onStartEditing, onSaveAs, onSaveChanges, onRename, onDuplicate, onExportLayout, onDelete, onUndo, onResetLayout, onDoneEditing, onBeginTypographyChange, onTypographyChange }: ExportToolbarProps) {
   const [isPreparingPrint, setIsPreparingPrint] = useState(false);
   const [isPreparingJpeg, setIsPreparingJpeg] = useState(false);
   const [exportError, setExportError] = useState('');
@@ -180,6 +181,7 @@ export function ExportToolbar({ data, isEditing, layouts, activeLayoutId, canUnd
           <button type="button" className="primary-action" onClick={onSaveAs}><Save size={16} /><span>Save Layout As</span></button>
           {customLayoutSelected && <button type="button" onClick={onSaveChanges}><Save size={16} /><span>Save Changes</span></button>}
           <button type="button" onClick={onDuplicate}><Copy size={16} /><span>Duplicate</span></button>
+          {customLayoutSelected && <button type="button" onClick={onExportLayout}><Download size={16} /><span>Export Layout</span></button>}
           {customLayoutSelected && <button type="button" onClick={onRename}><Pencil size={16} /><span>Rename</span></button>}
           {customLayoutSelected && <button type="button" className="danger-action" onClick={onDelete}><Trash2 size={16} /><span>Delete Layout</span></button>}
           <button type="button" onClick={onResetLayout}><RotateCcw size={16} /><span>Reset</span></button>
