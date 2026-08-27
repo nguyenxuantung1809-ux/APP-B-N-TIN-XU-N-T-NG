@@ -29,8 +29,9 @@ type DialogMode = 'save' | 'rename' | 'delete' | null;
 
 const BUNDLED_MAIN_LAYOUT_ID = 'bundled-main';
 const BUNDLED_MAIN_LAYOUT_DATE = '2026-08-27T00:00:00.000Z';
+const DEFAULT_MAIN_LAYOUT_ASSET = '/default-main-layout.fx-layout.json';
 
-function createBundledMainProfile(): LayoutProfile {
+function createFallbackMainProfile(): LayoutProfile {
   return {
     id: BUNDLED_MAIN_LAYOUT_ID,
     name: 'MAIN',
@@ -38,6 +39,15 @@ function createBundledMainProfile(): LayoutProfile {
     createdAt: BUNDLED_MAIN_LAYOUT_DATE,
     updatedAt: BUNDLED_MAIN_LAYOUT_DATE,
   };
+}
+
+async function loadDefaultMainProfile(): Promise<LayoutProfile> {
+  const response = await fetch(DEFAULT_MAIN_LAYOUT_ASSET, { cache: 'no-store' });
+  if (!response.ok) throw new Error(`Default MAIN layout returned ${response.status}.`);
+  const library = parseLayoutLibrary(await response.text());
+  const profile = library?.profiles.find((item) => item.name.toLowerCase() === 'main');
+  if (!profile) throw new Error('Default MAIN layout is invalid.');
+  return { ...profile, snapshot: cloneLayoutSnapshot(profile.snapshot) };
 }
 
 function createProfile(name: string, snapshot: BulletinLayoutSnapshot): LayoutProfile {
@@ -144,6 +154,7 @@ export default function Home() {
     let cancelled = false;
     let frame = 0;
     const initialize = async () => {
+      const defaultMain = await loadDefaultMainProfile().catch(() => createFallbackMainProfile());
       const indexedDbLibrary = parseLayoutLibrary(JSON.stringify(await loadStoredLayoutLibrary().catch(() => null)));
       const candidates = [
         indexedDbLibrary,
@@ -160,12 +171,19 @@ export default function Home() {
       const recoveredLibrary = candidates.reduce((best, candidate) => (
         candidate.profiles.length > best.profiles.length ? candidate : best
       ), indexedDbLibrary ?? { version: 4, activeProfileId: DEFAULT_LAYOUT_ID, profiles: [] });
-      const hasMainLayout = recoveredLibrary.profiles.some((profile) => profile.name.toLowerCase() === 'main');
-      const bundledMain = createBundledMainProfile();
-      const library = hasMainLayout ? recoveredLibrary : {
-        ...recoveredLibrary,
-        activeProfileId: recoveredLibrary.profiles.length === 0 ? bundledMain.id : recoveredLibrary.activeProfileId,
-        profiles: [bundledMain, ...recoveredLibrary.profiles],
+      // Version 1 of the public deployment seeded MAIN from the generic reset
+      // snapshot. Replace only that known seed. User-created layouts—including
+      // a user-owned MAIN—remain untouched.
+      const legacySeedWasActive = recoveredLibrary.activeProfileId === BUNDLED_MAIN_LAYOUT_ID;
+      const recoveredProfiles = recoveredLibrary.profiles.filter((profile) => profile.id !== BUNDLED_MAIN_LAYOUT_ID);
+      const existingMain = recoveredProfiles.find((profile) => profile.name.toLowerCase() === 'main');
+      const profilesWithMain = existingMain ? recoveredProfiles : [defaultMain, ...recoveredProfiles];
+      const library = {
+        version: 4 as const,
+        activeProfileId: legacySeedWasActive || recoveredProfiles.length === 0
+          ? (existingMain?.id ?? defaultMain.id)
+          : recoveredLibrary.activeProfileId,
+        profiles: profilesWithMain,
       };
       await saveStoredLayoutLibrary(library).catch(() => setPersistenceError('Browser storage is unavailable. Saved images may not survive a refresh.'));
       if (cancelled) return;
