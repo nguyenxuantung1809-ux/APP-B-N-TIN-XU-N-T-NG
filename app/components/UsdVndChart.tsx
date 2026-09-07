@@ -62,6 +62,22 @@ function ChartTooltip({ active, payload, label, seriesItems }: { active?: boolea
   </div>;
 }
 
+interface ChartXAxisTickProps {
+  x?: number;
+  y?: number;
+  payload?: { value?: string | number };
+  firstDate: string;
+  lastDate: string;
+  fontSize: number;
+}
+
+function ChartXAxisTick({ x = 0, y = 0, payload, firstDate, lastDate, fontSize }: ChartXAxisTickProps) {
+  const value = typeof payload?.value === 'string' ? payload.value : String(payload?.value ?? '');
+  if (!value) return null;
+  const textAnchor = value === firstDate ? 'start' : value === lastDate ? 'end' : 'middle';
+  return <text x={x} y={y} dy="0.71em" fill="#78a9bf" fontSize={fontSize} textAnchor={textAnchor}>{formatChartDate(value, false)}</text>;
+}
+
 function movementDescription(series: DisplaySeries, stats: LatestSeriesChange, locale: BulletinLocale) {
   if (stats.currentValue === null) return locale === 'vi' ? `${series.label}: không có dữ liệu.` : `${series.label}: data unavailable.`;
   if (stats.previousValue === null || stats.absoluteChange === null) return locale === 'vi'
@@ -86,7 +102,7 @@ function statTooltip(stats: LatestSeriesChange, locale: BulletinLocale) {
   ].join('\n');
 }
 
-export function UsdVndChart({ data, locale }: { data: UsdVndChartData; locale: BulletinLocale }) {
+export function UsdVndChart({ data, locale, tableDataFontSize }: { data: UsdVndChartData; locale: BulletinLocale; tableDataFontSize: number }) {
   const chartPoints = pointsInLatestChartYear(data.points);
   if (!chartPoints.length) return <div className="usd-vnd-chart-empty"><span>{locale === 'vi' ? 'Không có dữ liệu biểu đồ USD/VND' : 'No USD/VND chart data'}</span></div>;
   const seriesItems = seriesFor(data, locale);
@@ -102,12 +118,12 @@ export function UsdVndChart({ data, locale }: { data: UsdVndChartData; locale: B
       <div className="usd-vnd-chart-stat-name"><i style={{ backgroundColor: series.color }} /><span>{series.label}</span></div>
       <div className="usd-vnd-chart-stat-reading"><strong>{formatOptionalRate(stats.currentValue)}</strong><span className={`usd-vnd-chart-stat-change ${stats.movement === 'unavailable' ? 'neutral' : stats.movement}`}><b aria-hidden="true">{movementSymbol(stats.movement)}</b><span>{formatSignedChange(stats.absoluteChange, exchangeRateFormatter)}</span><em>/</em><span>{formatPercentChange(stats.percentageChange)}</span></span></div>
     </div>)}</div>
-    <div className="usd-vnd-chart-canvas">
+    <div className="usd-vnd-chart-canvas" style={{ fontSize: `${tableDataFontSize}px` }}>
       <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={90} debounce={60}>
         <LineChart data={chartPoints} margin={{ top: 7, right: 11, bottom: 2, left: 3 }} accessibilityLayer>
           <CartesianGrid stroke="rgba(93, 192, 238, .13)" strokeDasharray="2 4" vertical={false} />
-          <XAxis dataKey="date" tickFormatter={(value: string) => formatChartDate(value, false)} interval="preserveStartEnd" minTickGap={64} tick={{ fill: '#78a9bf' }} tickLine={false} axisLine={{ stroke: 'rgba(79, 181, 228, .24)' }} />
-          <YAxis domain={domain} tickFormatter={(value: number) => exchangeRateFormatter.format(value)} width="auto" tick={{ fill: '#78a9bf' }} tickLine={false} axisLine={false} tickCount={5} />
+          <XAxis dataKey="date" interval="preserveStartEnd" minTickGap={64} fontSize={tableDataFontSize} tick={(props) => <ChartXAxisTick {...props} firstDate={chartPoints[0].date} lastDate={latest.date} fontSize={tableDataFontSize} />} tickLine={false} axisLine={{ stroke: 'rgba(79, 181, 228, .24)' }} />
+          <YAxis domain={domain} tickFormatter={(value: number) => exchangeRateFormatter.format(value)} width="auto" fontSize={tableDataFontSize} tick={{ fill: '#78a9bf', fontSize: tableDataFontSize }} tickLine={false} axisLine={false} tickCount={5} />
           <Tooltip content={<ChartTooltip seriesItems={seriesItems} />} cursor={{ stroke: 'rgba(153, 226, 255, .45)', strokeWidth: 1 }} isAnimationActive={false} />
           {seriesItems.map((series) => <Line key={series.key} type="monotone" dataKey={series.key} name={series.label} stroke={series.color} strokeWidth={1.8} dot={false} activeDot={{ r: 3, strokeWidth: 1 }} connectNulls={false} isAnimationActive={false} />)}
         </LineChart>
