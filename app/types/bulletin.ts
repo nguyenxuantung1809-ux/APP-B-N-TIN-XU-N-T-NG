@@ -35,11 +35,20 @@ export interface UsdVndChartPoint {
   sbvCentral: number | null;
   blackMarket: number | null;
   interbank: number | null;
+  [seriesKey: string]: string | number | null;
+}
+
+export interface UsdVndChartSeries {
+  key: string;
+  label: string;
+  labelVi?: string;
+  color: string;
 }
 
 export interface UsdVndChartData {
   sourceSheet: string | null;
   points: UsdVndChartPoint[];
+  series?: UsdVndChartSeries[];
 }
 
 export type BulletinLocale = 'en' | 'vi';

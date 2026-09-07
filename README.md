@@ -2,6 +2,12 @@
 
 Ứng dụng chạy hoàn toàn trên máy để biến file Excel **FX MARKET BULLETIN** thành bản tin ngoại hối theo phong cách VietinBank.
 
+## Dùng ngay trên web
+
+[Mở FX Bulletin Studio](https://fx-bulletin-studio-nguyen-xuan-tung.hasagi0908.chatgpt.site)
+
+Link public này không yêu cầu đăng nhập. File Excel vẫn được đọc và xử lý trực tiếp trong trình duyệt của người dùng.
+
 ## Lần đầu sử dụng
 
 1. Mở thư mục `fx-bulletin-generator`.

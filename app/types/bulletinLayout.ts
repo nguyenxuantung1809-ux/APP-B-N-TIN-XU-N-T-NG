@@ -30,6 +30,7 @@ export type TypographyTargetId = BulletinBlockId | NestedBlockId | Recommendatio
 export type FontFamily = 'Inter' | 'Arial' | 'Helvetica' | 'Roboto' | 'Times New Roman' | 'Georgia';
 export type ImageFitMode = 'contain' | 'cover' | 'fill';
 export type ImagePositionMode = 'center' | 'top' | 'bottom' | 'left' | 'right';
+export type BackgroundFitMode = 'cover' | 'contain' | 'stretch' | 'original';
 export type TextAlignment = 'left' | 'center' | 'right' | 'justify';
 export type RecommendationActionMode = 'buy' | 'sell' | 'blank';
 
@@ -60,6 +61,14 @@ export interface BulletinLayoutAssets {
   recommendationActions: Record<string, RecommendationActionMode>;
 }
 
+export interface BulletinBackgroundState {
+  color: string;
+  source?: string;
+  fit: BackgroundFitMode;
+  position: ImagePositionMode;
+  opacity: number;
+}
+
 export interface LayoutItem<T extends string = string> {
   i: T;
   x: number;
@@ -76,6 +85,7 @@ export interface BulletinLayoutSnapshot {
   nested: Record<NestedParentId, NestedLayoutItem[]>;
   styles: Partial<Record<TypographyTargetId, BlockTypographyStyle>>;
   assets: BulletinLayoutAssets;
+  background: BulletinBackgroundState;
 }
 
 export interface LayoutProfile {
@@ -97,6 +107,13 @@ export const BULLETIN_LAYOUT_LIBRARY_KEY = 'vietinbank-fx-bulletin-layout-librar
 export const PREVIOUS_LAYOUT_LIBRARY_KEY = 'vietinbank-fx-bulletin-layout-library-v3';
 export const OLDER_LAYOUT_LIBRARY_KEY = 'vietinbank-fx-bulletin-layout-library-v2';
 export const LEGACY_LAYOUT_STORAGE_KEY = 'vietinbank-fx-bulletin-layout-v1';
+
+export const DEFAULT_BULLETIN_BACKGROUND: BulletinBackgroundState = {
+  color: '#00152d',
+  fit: 'cover',
+  position: 'center',
+  opacity: 1,
+};
 
 /** Dashboard composition from the approved screenshots, used by first-load and Reset. */
 export const DEFAULT_BULLETIN_LAYOUT: BulletinLayoutSnapshot = {
@@ -139,6 +156,7 @@ export const DEFAULT_BULLETIN_LAYOUT: BulletinLayoutSnapshot = {
     marketLegend: { imageFit: 'contain' },
   },
   assets: { images: {}, recommendationActions: {} },
+  background: { ...DEFAULT_BULLETIN_BACKGROUND },
 };
 
 export const FONT_FAMILIES: FontFamily[] = ['Inter', 'Arial', 'Helvetica', 'Roboto', 'Times New Roman', 'Georgia'];
@@ -176,6 +194,7 @@ const STATIC_STYLE_IDS = new Set<string>([...ROOT_IDS, ...Object.values(NESTED_I
 const FONT_FAMILY_SET = new Set<string>(FONT_FAMILIES);
 const IMAGE_FIT_SET = new Set<string>(['contain', 'cover', 'fill']);
 const IMAGE_POSITION_SET = new Set<string>(['center', 'top', 'bottom', 'left', 'right']);
+const BACKGROUND_FIT_SET = new Set<string>(['cover', 'contain', 'stretch', 'original']);
 const TEXT_ALIGNMENT_SET = new Set<string>(['left', 'center', 'right', 'justify']);
 const RECOMMENDATION_ACTION_SET = new Set<string>(['buy', 'sell', 'blank']);
 const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
@@ -258,6 +277,28 @@ function normalizeAssets(value: unknown): BulletinLayoutAssets {
   return { images, recommendationActions };
 }
 
+export function normalizeBackground(value: unknown): BulletinBackgroundState {
+  if (!value || typeof value !== 'object') return { ...DEFAULT_BULLETIN_BACKGROUND };
+  const candidate = value as Partial<BulletinBackgroundState>;
+  return {
+    color: typeof candidate.color === 'string' && HEX_COLOR_PATTERN.test(candidate.color)
+      ? candidate.color.toLowerCase()
+      : DEFAULT_BULLETIN_BACKGROUND.color,
+    ...(typeof candidate.source === 'string' && candidate.source.startsWith('data:image/')
+      ? { source: candidate.source }
+      : {}),
+    fit: candidate.fit && BACKGROUND_FIT_SET.has(candidate.fit)
+      ? candidate.fit
+      : DEFAULT_BULLETIN_BACKGROUND.fit,
+    position: candidate.position && IMAGE_POSITION_SET.has(candidate.position)
+      ? candidate.position
+      : DEFAULT_BULLETIN_BACKGROUND.position,
+    opacity: Number.isFinite(candidate.opacity)
+      ? Math.max(0, Math.min(1, Number(candidate.opacity)))
+      : DEFAULT_BULLETIN_BACKGROUND.opacity,
+  };
+}
+
 export function cloneLayoutSnapshot(snapshot: BulletinLayoutSnapshot = DEFAULT_BULLETIN_LAYOUT): BulletinLayoutSnapshot {
   return {
     root: snapshot.root.map((item) => ({ ...item })),
@@ -272,6 +313,7 @@ export function cloneLayoutSnapshot(snapshot: BulletinLayoutSnapshot = DEFAULT_B
       images: Object.fromEntries(Object.entries(snapshot.assets?.images ?? {}).map(([id, asset]) => [id, { ...asset }])),
       recommendationActions: { ...(snapshot.assets?.recommendationActions ?? {}) },
     },
+    background: normalizeBackground((snapshot as Partial<BulletinLayoutSnapshot>).background),
   };
 }
 
@@ -298,6 +340,7 @@ export function normalizeLayoutSnapshot(value: unknown): BulletinLayoutSnapshot 
     nested: { header, highlightedNews, detailedAnalysis, footer },
     styles: normalizeStyles(candidate.styles),
     assets: normalizeAssets(candidate.assets),
+    background: normalizeBackground(candidate.background),
   };
 }
 

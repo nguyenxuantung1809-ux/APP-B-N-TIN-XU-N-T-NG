@@ -3,6 +3,7 @@
 import { AlertTriangle, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BulletinPreview } from './components/BulletinPreview';
+import { BackgroundEditorToolbar } from './components/BackgroundEditorToolbar';
 import { ExcelUploader } from './components/ExcelUploader';
 import { ExportToolbar, type TypographyEditorStyle } from './components/ExportToolbar';
 import { useEditorSelection } from './hooks/useEditorSelection';
@@ -15,17 +16,20 @@ import {
   LEGACY_LAYOUT_STORAGE_KEY,
   OLDER_LAYOUT_LIBRARY_KEY,
   PREVIOUS_LAYOUT_LIBRARY_KEY,
+  DEFAULT_BULLETIN_BACKGROUND,
   cloneLayoutSnapshot,
   migrateLegacyLayout,
   parseLayoutLibrary,
   typographyDefaultsFor,
   type BlockTypographyStyle,
+  type BulletinBackgroundState,
   type BulletinLayoutSnapshot,
   type LayoutProfile,
   type TypographyTargetId,
 } from './types/bulletinLayout';
 
 type DialogMode = 'save' | 'rename' | 'delete' | null;
+type EditorMode = 'view' | 'layout' | 'background';
 
 const BUNDLED_MAIN_LAYOUT_ID = 'bundled-main';
 const BUNDLED_MAIN_LAYOUT_DATE = '2026-08-27T00:00:00.000Z';
@@ -92,7 +96,7 @@ export default function Home() {
   const [state, setState] = useState<ParseState>('idle');
   const [data, setData] = useState<BulletinData | null>(null);
   const [error, setError] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
+  const [editorMode, setEditorMode] = useState<EditorMode>('view');
   const [layout, setLayout] = useState<BulletinLayoutSnapshot>(cloneLayoutSnapshot);
   const [profiles, setProfiles] = useState<LayoutProfile[]>([]);
   const [activeLayoutId, setActiveLayoutId] = useState(DEFAULT_LAYOUT_ID);
@@ -106,6 +110,8 @@ export default function Home() {
   const profilesRef = useRef<LayoutProfile[]>([]);
   const activeLayoutIdRef = useRef(DEFAULT_LAYOUT_ID);
   const persistenceQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const backgroundBeforeEditRef = useRef<BulletinBackgroundState | null>(null);
+  const isEditing = editorMode === 'layout';
 
   const applyLayout = useCallback((next: BulletinLayoutSnapshot) => {
     const cloned = cloneLayoutSnapshot(next);
@@ -219,7 +225,8 @@ export default function Home() {
     setData(null);
     setError('');
     setState('idle');
-    setIsEditing(false);
+    setEditorMode('view');
+    backgroundBeforeEditRef.current = null;
     selection.clear();
   };
 
@@ -240,6 +247,27 @@ export default function Home() {
       styles,
     });
   };
+
+  const startBackgroundEditing = () => {
+    backgroundBeforeEditRef.current = { ...layoutRef.current.background };
+    selection.clear();
+    setEditorMode('background');
+  };
+
+  const changeBackground = (next: BulletinBackgroundState) => {
+    applyLayout({ ...layoutRef.current, background: { ...next } });
+  };
+
+  const resetBackground = () => {
+    applyLayout({ ...layoutRef.current, background: { ...DEFAULT_BULLETIN_BACKGROUND } });
+  };
+
+  const cancelBackgroundEditing = useCallback(() => {
+    const previous = backgroundBeforeEditRef.current;
+    if (previous) applyLayout({ ...layoutRef.current, background: { ...previous } });
+    backgroundBeforeEditRef.current = null;
+    setEditorMode('layout');
+  }, [applyLayout]);
 
   const selectLayout = (id: string) => {
     const currentProfiles = profilesRef.current;
@@ -294,6 +322,28 @@ export default function Home() {
       : profile);
     applyProfiles(next);
     void persistLibrary(next, currentActiveId);
+  };
+
+  const saveBackground = () => {
+    const currentProfiles = profilesRef.current;
+    const currentActiveId = activeLayoutIdRef.current;
+    const currentSnapshot = cloneLayoutSnapshot(layoutRef.current);
+    if (currentActiveId === DEFAULT_LAYOUT_ID) {
+      const profile = createProfile(uniqueLayoutName(`Layout ${currentProfiles.length + 1}`, currentProfiles), currentSnapshot);
+      const next = [...currentProfiles, profile];
+      applyProfiles(next);
+      applyActiveLayoutId(profile.id);
+      void persistLibrary(next, profile.id);
+    } else {
+      const now = new Date().toISOString();
+      const next = currentProfiles.map((profile) => profile.id === currentActiveId
+        ? { ...profile, snapshot: currentSnapshot, updatedAt: now }
+        : profile);
+      applyProfiles(next);
+      void persistLibrary(next, currentActiveId);
+    }
+    backgroundBeforeEditRef.current = null;
+    setEditorMode('layout');
   };
 
   const openRenameDialog = () => {
@@ -370,21 +420,30 @@ export default function Home() {
   );
 
   useEffect(() => {
-    if (!isEditing) return;
+    if (editorMode === 'view') return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') selection.clear();
+      if (event.key !== 'Escape') return;
+      if (editorMode === 'background') cancelBackgroundEditing();
+      else selection.clear();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isEditing, selection]);
+  }, [cancelBackgroundEditing, editorMode, selection]);
 
   if (!data || state === 'idle' || state === 'error') {
     return <ExcelUploader busy={state === 'parsing'} error={error} onFile={parseFile} />;
   }
 
   return (
-    <main className={`preview-shell${isEditing ? ' is-editing-layout' : ''}`}>
-      <ExportToolbar
+    <main className={`preview-shell${isEditing ? ' is-editing-layout' : ''}${editorMode === 'background' ? ' is-editing-background' : ''}`}>
+      {editorMode === 'background' ? <BackgroundEditorToolbar
+        activeLayoutName={activeProfileName}
+        background={layout.background}
+        onChange={changeBackground}
+        onReset={resetBackground}
+        onSave={saveBackground}
+        onCancel={cancelBackgroundEditing}
+      /> : <ExportToolbar
         data={data}
         isEditing={isEditing}
         layouts={profiles.map(({ id, name }) => ({ id, name }))}
@@ -395,7 +454,7 @@ export default function Home() {
         selectedStyle={selectedStyle}
         onSelectLayout={selectLayout}
         onUploadNew={uploadNew}
-        onStartEditing={() => setIsEditing(true)}
+        onStartEditing={() => setEditorMode('layout')}
         onSaveAs={openSaveDialog}
         onSaveChanges={saveChanges}
         onRename={openRenameDialog}
@@ -404,14 +463,15 @@ export default function Home() {
         onDelete={() => setDialogMode('delete')}
         onUndo={undo}
         onResetLayout={resetLayout}
-        onDoneEditing={() => { setIsEditing(false); selection.clear(); }}
+        onDoneEditing={() => { setEditorMode('view'); selection.clear(); }}
+        onStartBackgroundEditing={startBackgroundEditing}
         onBeginTypographyChange={beginLayoutChange}
         onTypographyChange={changeTypography}
-      />
+      />}
       {persistenceError && <div className="layout-storage-error no-print" role="alert">{persistenceError}</div>}
       <BulletinPreview
         data={data}
-        isEditing={isEditing}
+        editorMode={editorMode}
         layout={layout}
         selectedTargetIds={selection.selectedTypographyIds}
         selectedImageId={selection.selectedImageId}

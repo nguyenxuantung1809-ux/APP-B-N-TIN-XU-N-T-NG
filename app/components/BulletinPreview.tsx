@@ -250,7 +250,7 @@ function Recommendations({ data, labels, isEditing, selectedTargetIds, styles, a
 
 interface BulletinPreviewProps {
   data: BulletinData;
-  isEditing: boolean;
+  editorMode: 'view' | 'layout' | 'background';
   layout: BulletinLayoutSnapshot;
   selectedTargetIds: TypographyTargetId[];
   selectedImageId: string;
@@ -261,7 +261,9 @@ interface BulletinPreviewProps {
   onBeginChange: () => void;
 }
 
-export function BulletinPreview({ data, isEditing, layout, selectedTargetIds, selectedImageId, onSelectTarget, onSelectImage, onClearSelection, onLayoutChange, onBeginChange }: BulletinPreviewProps) {
+export function BulletinPreview({ data, editorMode, layout, selectedTargetIds, selectedImageId, onSelectTarget, onSelectImage, onClearSelection, onLayoutChange, onBeginChange }: BulletinPreviewProps) {
+  const isEditing = editorMode === 'layout';
+  const isBackgroundEditing = editorMode === 'background';
   const { ref: gridRef, width: gridWidth } = useMeasuredWidth<HTMLDivElement>(320);
   const selectRoot = (id: BulletinBlockId, label: string, additive: boolean) => onSelectTarget(id, label, additive);
   const selectChild = (id: NestedBlockId, label: string, additive: boolean) => onSelectTarget(id, label, additive);
@@ -364,7 +366,7 @@ export function BulletinPreview({ data, isEditing, layout, selectedTargetIds, se
   return (
     <article
       id="bulletin-container"
-      className={`bulletin-container nested-layout-canvas${isEditing ? ' editing-layout' : ''}`}
+      className={`bulletin-container nested-layout-canvas${isEditing ? ' editing-layout' : ''}${isBackgroundEditing ? ' background-edit-mode' : ''}`}
       onMouseDownCapture={(event) => {
         if (!isEditing) return;
         const image = (event.target as Element).closest<HTMLElement>('[data-editable-image-id]');
@@ -378,6 +380,14 @@ export function BulletinPreview({ data, isEditing, layout, selectedTargetIds, se
         if (isEditing && !(event.target as Element).closest('[data-editor-element-id]')) onClearSelection();
       }}
     >
+      <div className="bulletin-background-layer" data-background-layer="true" aria-hidden="true" style={{ backgroundColor: layout.background.color }}>
+        {layout.background.source && <div className="bulletin-background-image" style={{
+          backgroundImage: `url("${layout.background.source}")`,
+          backgroundPosition: layout.background.position === 'top' ? 'center top' : layout.background.position === 'bottom' ? 'center bottom' : layout.background.position === 'left' ? 'left center' : layout.background.position === 'right' ? 'right center' : 'center center',
+          backgroundSize: layout.background.fit === 'stretch' ? '100% 100%' : layout.background.fit === 'original' ? 'auto' : layout.background.fit,
+          opacity: layout.background.opacity,
+        }} />}
+      </div>
       <div ref={gridRef} className="bulletin-root-grid-host">
         <GridLayout
           className="bulletin-editable-grid bulletin-root-grid"

@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Copy, Download, FileDown, FileImage, Grip, LoaderCircle, Pencil, Printer, RotateCcw, Save, Trash2, Undo2 } from 'lucide-react';
+import { Check, Copy, Download, FileDown, FileImage, Grip, Image as ImageIcon, LoaderCircle, Pencil, Printer, RotateCcw, Save, Trash2, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 import { formatLongDate } from '../lib/formatters';
 import type { BulletinData } from '../types/bulletin';
@@ -31,6 +31,7 @@ interface ExportToolbarProps {
   onUndo: () => void;
   onResetLayout: () => void;
   onDoneEditing: () => void;
+  onStartBackgroundEditing: () => void;
   onBeginTypographyChange: () => void;
   onTypographyChange: (patch: Partial<BlockTypographyStyle>) => void;
 }
@@ -64,7 +65,7 @@ async function waitForStableBulletin(bulletin: HTMLElement) {
   }
 }
 
-export function ExportToolbar({ data, isEditing, layouts, activeLayoutId, canUndo, selectedTargetLabel, selectedTargetCount, selectedStyle, onSelectLayout, onUploadNew, onStartEditing, onSaveAs, onSaveChanges, onRename, onDuplicate, onExportLayout, onDelete, onUndo, onResetLayout, onDoneEditing, onBeginTypographyChange, onTypographyChange }: ExportToolbarProps) {
+export function ExportToolbar({ data, isEditing, layouts, activeLayoutId, canUndo, selectedTargetLabel, selectedTargetCount, selectedStyle, onSelectLayout, onUploadNew, onStartEditing, onSaveAs, onSaveChanges, onRename, onDuplicate, onExportLayout, onDelete, onUndo, onResetLayout, onDoneEditing, onStartBackgroundEditing, onBeginTypographyChange, onTypographyChange }: ExportToolbarProps) {
   const [isPreparingPrint, setIsPreparingPrint] = useState(false);
   const [isPreparingJpeg, setIsPreparingJpeg] = useState(false);
   const [exportError, setExportError] = useState('');
@@ -185,6 +186,7 @@ export function ExportToolbar({ data, isEditing, layouts, activeLayoutId, canUnd
           {customLayoutSelected && <button type="button" onClick={onRename}><Pencil size={16} /><span>Rename</span></button>}
           {customLayoutSelected && <button type="button" className="danger-action" onClick={onDelete}><Trash2 size={16} /><span>Delete Layout</span></button>}
           <button type="button" onClick={onResetLayout}><RotateCcw size={16} /><span>Reset</span></button>
+          <button type="button" onClick={onStartBackgroundEditing}><ImageIcon size={16} /><span>Background Edit</span></button>
           <button type="button" onClick={onDoneEditing}><Check size={16} /><span>Done</span></button>
         </> : <>
           <button type="button" onClick={onUploadNew}><RotateCcw size={16} /><span>Upload New Excel</span></button>

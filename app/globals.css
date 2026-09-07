@@ -690,6 +690,39 @@ button { border: 0; }
 .editing-toolbar .toolbar-actions { flex-wrap: wrap; justify-content: flex-end; }
 .editing-toolbar .toolbar-actions button { min-height: 36px; padding-inline: 10px; font-size: 10px; }
 
+.background-editor-toolbar {
+  width: min(1800px, calc(100% - 22px));
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 18px;
+}
+.background-editor-toolbar .toolbar-context { flex: 1 0 220px; }
+.background-toolbar-controls { flex: 1 1 1120px; flex-wrap: wrap; justify-content: flex-end; }
+.background-toolbar-controls > label { display: grid; grid-template-columns: auto; gap: 4px; }
+.background-toolbar-controls > label > span { color: #75cdec; font-size: 7px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.background-toolbar-controls select,
+.background-toolbar-controls input[type='text'],
+.background-toolbar-controls input:not([type]) {
+  height: 36px;
+  color: #eafaff;
+  border: 1px solid rgba(93, 204, 247, .27);
+  border-radius: 8px;
+  outline: 0;
+  background: #07375b;
+  font-size: 10px;
+}
+.background-toolbar-controls select { min-width: 112px; padding: 0 28px 0 9px; }
+.background-color-control { grid-template-columns: 36px 86px !important; }
+.background-color-control > span { grid-column: 1 / -1; }
+.background-color-control input[type='color'] { width: 36px; height: 36px; padding: 3px; cursor: pointer; border: 1px solid rgba(93, 204, 247, .27); border-radius: 8px; background: #07375b; }
+.background-color-control input[aria-label='Background color HEX'] { width: 86px; padding: 0 8px; }
+.background-opacity-control { grid-template-columns: 102px 48px !important; min-width: 158px; }
+.background-opacity-control > span { grid-column: 1 / -1; }
+.background-opacity-control input { width: 102px; accent-color: #47d2ff; }
+.background-opacity-control .background-opacity-number { width: 48px; padding: 0 5px; text-align: center; }
+.background-editor-error { flex-basis: 100%; display: inline-flex; justify-content: flex-end; align-items: center; gap: 5px; color: #ffb3aa; font-size: 9px; }
+.preview-shell.is-editing-background { padding-top: 116px; }
+
 .typography-editor {
   display: flex;
   align-items: end;
@@ -754,11 +787,31 @@ button { border: 0; }
 .chart-paste-hint { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 5px; color: #71d9ff; text-align: center; }
 .chart-paste-hint strong { font-size: 10px; }
 .chart-paste-hint span { color: #7faec3; font-size: 8px; }
-.usd-vnd-chart { position: relative; z-index: 2; display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 110px; overflow: hidden; padding: 2px 3px 4px; background: radial-gradient(circle at 50% 30%, rgba(0, 128, 207, .08), transparent 58%), rgba(0, 18, 42, .36); }
-.usd-vnd-chart-legend { display: flex; flex: 0 0 18px; align-items: center; justify-content: center; gap: 10px; color: #b7d8e7; font-size: var(--block-table-data-size, 8.5px); line-height: 1; }
-.usd-vnd-chart-legend span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-.usd-vnd-chart-legend i { width: 6px; height: 6px; border-radius: 50%; }
-.usd-vnd-chart-canvas { flex: 1; min-width: 0; min-height: 90px; }
+.usd-vnd-chart { position: relative; z-index: 2; display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 110px; overflow: hidden; padding: 0 3px 4px; background: radial-gradient(circle at 50% 30%, rgba(0, 128, 207, .08), transparent 58%), rgba(0, 18, 42, .36); container-type: inline-size; }
+.usd-vnd-chart-stats {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 132px), 1fr));
+  gap: 1px;
+  min-width: 0;
+  padding: 5px 6px 6px;
+  color: #b7d8e7;
+  border-bottom: 1px solid rgba(93, 192, 238, .13);
+  background: rgba(0, 25, 53, .28);
+  font-size: var(--block-table-data-size, 8.5px);
+  line-height: 1.15;
+}
+.usd-vnd-chart-stat { min-width: 0; padding: 3px 6px; border-radius: 5px; }
+.usd-vnd-chart-stat:hover { background: rgba(64, 185, 238, .07); }
+.usd-vnd-chart-stat-name { display: flex; min-width: 0; align-items: flex-start; gap: .45em; color: #b7d8e7; font-size: .92em; font-weight: 650; line-height: 1.12; }
+.usd-vnd-chart-stat-name i { flex: 0 0 auto; width: .62em; height: .62em; margin-top: .2em; border-radius: 50%; }
+.usd-vnd-chart-stat-name span { min-width: 0; overflow-wrap: anywhere; }
+.usd-vnd-chart-stat-reading { display: flex; min-width: 0; align-items: baseline; flex-wrap: wrap; gap: 2px .55em; margin-top: 4px; }
+.usd-vnd-chart-stat-reading > strong { color: #f5fbff; font-size: 1.18em; font-weight: 780; font-variant-numeric: tabular-nums; letter-spacing: -.015em; }
+.usd-vnd-chart-stat-change { display: inline-flex; min-width: 0; align-items: baseline; gap: .25em; font-size: .88em; font-weight: 720; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.usd-vnd-chart-stat-change b { font-size: .8em; }
+.usd-vnd-chart-stat-change em { color: #668da1; font-style: normal; }
+.usd-vnd-chart-canvas { flex: 1 1 auto; min-width: 0; min-height: 90px; }
 .usd-vnd-chart .recharts-wrapper:focus,
 .usd-vnd-chart .recharts-surface:focus { outline: none; }
 .usd-vnd-tooltip { display: grid; gap: 4px; min-width: 150px; padding: 8px 9px; color: #dff6ff; border: 1px solid rgba(91, 207, 255, .4); border-radius: 8px; background: rgba(0, 25, 53, .97); box-shadow: 0 10px 30px rgba(0, 4, 15, .45); font-family: Inter, Arial, sans-serif; font-size: var(--block-table-data-size, 8.5px); }
@@ -1277,4 +1330,35 @@ body.bulletin-export-mode #bulletin-container .react-grid-item { transition: non
 
 .editing-layout #bulletin-container [data-image-layer='decorative'] {
   z-index: 0 !important;
+}
+
+/* The page background is a first-class layout property, but never a layout
+   object. It stays below decorative artwork and all editor hit targets. */
+#bulletin-container { isolation: isolate; }
+#bulletin-container .bulletin-background-layer {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+#bulletin-container .bulletin-background-image {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+}
+#bulletin-container .bulletin-root-grid-host,
+#bulletin-container .parse-warnings {
+  position: relative;
+  z-index: 2;
+}
+#bulletin-container.background-edit-mode .bulletin-root-grid-host,
+#bulletin-container.background-edit-mode .parse-warnings {
+  visibility: hidden !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+#bulletin-container.background-edit-mode .bulletin-background-layer {
+  z-index: 1;
 }
